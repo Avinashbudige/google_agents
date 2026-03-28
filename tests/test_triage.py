@@ -2,7 +2,8 @@ import sys
 import os
 import time
 import pytest
-from unittest.mock import MagicMock, patch
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 from pydantic import ValidationError
 
 # Mock google.genai before importing modules that depend on it
@@ -21,8 +22,8 @@ from fastapi import HTTPException
 @pytest.fixture
 def mock_agents():
     """Mocks both Vertex AI agents (extractor + triage)."""
-    with patch("main.run_extraction") as mock_extract, \
-         patch("main.run_triage") as mock_triage:
+    with patch("main.run_extraction", new_callable=AsyncMock) as mock_extract, \
+         patch("main.run_triage", new_callable=AsyncMock) as mock_triage:
         yield mock_extract, mock_triage
 
 
@@ -47,7 +48,7 @@ def test_chest_pain_sweating_red(mock_agents):
         "action_plan": ["Call 108 ambulance immediately", "Chew aspirin 325mg", "Do not eat or drink"]
     }
     start = time.time()
-    res = triage_endpoint(TriageRequest(text="chest pain 2hrs sweating left arm pain"))
+    res = asyncio.run(triage_endpoint(TriageRequest(text="chest pain 2hrs sweating left arm pain")))
     assert time.time() - start < 1.2, "Latency exceeded 1.2s"
     assert res["triage"]["urgency_level"] == "RED"
     assert any("108" in step for step in res["triage"]["action_plan"])
@@ -66,7 +67,7 @@ def test_breathing_difficulty_red(mock_agents):
         "urgency_level": "RED",
         "action_plan": ["Call emergency services", "Sit upright", "Use inhaler if available"]
     }
-    res = triage_endpoint(TriageRequest(text="can't breathe properly wheezing blue lips 30 mins"))
+    res = asyncio.run(triage_endpoint(TriageRequest(text="can't breathe properly wheezing blue lips 30 mins")))
     assert res["triage"]["urgency_level"] == "RED"
     assert any("emergency" in s.lower() for s in res["triage"]["action_plan"])
 
@@ -84,7 +85,7 @@ def test_stroke_symptoms_red(mock_agents):
         "urgency_level": "RED",
         "action_plan": ["Call 108 immediately", "Note exact time symptoms started", "Do not give food or water"]
     }
-    res = triage_endpoint(TriageRequest(text="face drooping slurred speech arm weak confused 1hr ago"))
+    res = asyncio.run(triage_endpoint(TriageRequest(text="face drooping slurred speech arm weak confused 1hr ago")))
     assert res["triage"]["urgency_level"] == "RED"
     assert res["extracted"]["symptoms"] == ["facial drooping", "slurred speech"]
 
@@ -102,7 +103,7 @@ def test_high_fever_yellow(mock_agents):
         "urgency_level": "YELLOW",
         "action_plan": ["Visit ER within 2 hours", "Take paracetamol 500mg", "Cool compresses on forehead"]
     }
-    res = triage_endpoint(TriageRequest(text="fever 104F shivering last 2 days"))
+    res = asyncio.run(triage_endpoint(TriageRequest(text="fever 104F shivering last 2 days")))
     assert res["triage"]["urgency_level"] == "YELLOW"
     assert res["status"] == "success"
 
@@ -120,7 +121,7 @@ def test_abdominal_pain_vomiting_yellow(mock_agents):
         "urgency_level": "YELLOW",
         "action_plan": ["See doctor within 4hrs", "Stay hydrated with sips of water", "Avoid solid food temporarily"]
     }
-    res = triage_endpoint(TriageRequest(text="stomach pain vomiting last 6 hours nausea no fever"))
+    res = asyncio.run(triage_endpoint(TriageRequest(text="stomach pain vomiting last 6 hours nausea no fever")))
     assert res["triage"]["urgency_level"] == "YELLOW"
     assert len(res["triage"]["action_plan"]) >= 2
 
@@ -138,7 +139,7 @@ def test_mild_headache_green(mock_agents):
         "urgency_level": "GREEN",
         "action_plan": ["Rest in a quiet dark room", "Take paracetamol", "Stay hydrated"]
     }
-    res = triage_endpoint(TriageRequest(text="headache for 2 hours"))
+    res = asyncio.run(triage_endpoint(TriageRequest(text="headache for 2 hours")))
     assert res["triage"]["urgency_level"] == "GREEN"
     assert any("paracetamol" in s.lower() for s in res["triage"]["action_plan"])
 
@@ -156,7 +157,7 @@ def test_mild_fever_green(mock_agents):
         "urgency_level": "GREEN",
         "action_plan": ["Monitor 24hrs", "Rest at home", "Paracetamol if temp rises above 38.5°C"]
     }
-    res = triage_endpoint(TriageRequest(text="mild fever runny nose sore throat yesterday"))
+    res = asyncio.run(triage_endpoint(TriageRequest(text="mild fever runny nose sore throat yesterday")))
     assert res["triage"]["urgency_level"] == "GREEN"
     assert "Monitor 24hrs" in res["triage"]["action_plan"]
 
@@ -174,7 +175,7 @@ def test_minor_cut_green(mock_agents):
         "urgency_level": "GREEN",
         "action_plan": ["Clean wound with water", "Apply antiseptic", "Cover with bandage"]
     }
-    res = triage_endpoint(TriageRequest(text="small cut on my finger bleeding stopped"))
+    res = asyncio.run(triage_endpoint(TriageRequest(text="small cut on my finger bleeding stopped")))
     assert res["triage"]["urgency_level"] == "GREEN"
     assert res["extracted"]["duration"] == "just now"
 
@@ -192,7 +193,7 @@ def test_gibberish_unable_to_assess(mock_agents):
         "urgency_level": "YELLOW",
         "action_plan": ["Unable to assess — please describe symptoms clearly", "Consult a physician"]
     }
-    res = triage_endpoint(TriageRequest(text="asdfghjkl qwerty 123"))
+    res = asyncio.run(triage_endpoint(TriageRequest(text="asdfghjkl qwerty 123")))
     assert "Unable to assess" in res["triage"]["action_plan"][0]
 
 

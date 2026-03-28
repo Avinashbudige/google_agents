@@ -1,10 +1,14 @@
 import os
 import re
 import json
+import logging
 import google.auth
 from google import genai
 from google.genai import types
 from google.oauth2 import service_account
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "aiagents-491012")
 LOCATION   = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
@@ -32,8 +36,8 @@ def _parse_json(raw: str) -> dict:
         return json.loads(match.group())
     return json.loads(raw)
 
-def run_triage(extracted_data: dict, api_key: str = "") -> dict:
-    """Agent 2: Triages patient data into actionable urgency levels via Vertex AI ADC."""
+async def run_triage(extracted_data: dict, api_key: str = "") -> dict:
+    """Agent 2: Triages patient data into actionable urgency levels asynchronously via Vertex AI ADC."""
     config = types.GenerateContentConfig(
         system_instruction=(
             "You are an expert clinical triage agent. "
@@ -49,7 +53,8 @@ def run_triage(extracted_data: dict, api_key: str = "") -> dict:
 
     prompt = f"Triage the following patient details:\n{json.dumps(extracted_data)}"
 
-    response = _CLIENT.models.generate_content(
+    logger.info("Initializing Agent 2 triage process.")
+    response = await _CLIENT.aio.models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt,
         config=config
@@ -58,5 +63,5 @@ def run_triage(extracted_data: dict, api_key: str = "") -> dict:
     raw = response.text if response.text else ""
     if not raw and response.candidates:
         raw = response.candidates[0].content.parts[0].text
-    print(f"[TRIAGE RAW]: {repr(raw)}")
+    logger.debug(f"Triage Raw Response: {repr(raw)}")
     return _parse_json(raw)

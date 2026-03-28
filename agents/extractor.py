@@ -1,10 +1,14 @@
 import os
 import re
 import json
+import logging
 import google.auth
 from google import genai
 from google.genai import types
 from google.oauth2 import service_account
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "aiagents-491012")
 LOCATION   = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
@@ -34,8 +38,8 @@ def _parse_json(raw: str) -> dict:
         return json.loads(match.group())
     return json.loads(raw)
 
-def run_extraction(text: str, api_key: str = "") -> dict:
-    """Agent 1: Extracts structured entities from messy text via Vertex AI ADC."""
+async def run_extraction(text: str, api_key: str = "") -> dict:
+    """Agent 1: Extracts structured entities from messy text asynchronously via Vertex AI ADC."""
     config = types.GenerateContentConfig(
         system_instruction=(
             "You are a fast, precise clinical entity extractor. "
@@ -50,7 +54,8 @@ def run_extraction(text: str, api_key: str = "") -> dict:
 
     prompt = f'Extract entities from: "{text}"'
 
-    response = _CLIENT.models.generate_content(
+    logger.info("Initializing Agent 1 extraction process.")
+    response = await _CLIENT.aio.models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt,
         config=config
@@ -59,5 +64,5 @@ def run_extraction(text: str, api_key: str = "") -> dict:
     raw = response.text if response.text else ""
     if not raw and response.candidates:
         raw = response.candidates[0].content.parts[0].text
-    print(f"[EXTRACTOR RAW]: {repr(raw)}")
+    logger.debug(f"Extractor Raw Response: {repr(raw)}")
     return _parse_json(raw)

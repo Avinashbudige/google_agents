@@ -20,7 +20,12 @@ API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/api/triage")
 # Ensure httpx timeout isn't too strict, but short enough to demonstrate latency requirements
 TIMEOUT_SEC = 60.0
 
-if st.button("Evaluate Triage", type="primary", use_container_width=True):
+if st.button(
+    "Evaluate Triage", 
+    type="primary", 
+    use_container_width=True,
+    help="Click to analyze the patient symptoms securely and generate an actionable triage plan."
+):
     if user_input.strip() == "":
         st.error("Please enter patient symptoms to process.")
     else:
@@ -55,7 +60,7 @@ if st.button("Evaluate Triage", type="primary", use_container_width=True):
                             st.markdown(f"- {step}")
                             
                     with col2:
-                        st.subheader("🔍 Extraction Base")
+                        st.subheader("🔍 Extraction Base", help="The structured underlying medical data parsed by the AI.")
                         st.json(extracted_info)
                         
                 else:
