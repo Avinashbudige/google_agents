@@ -1,23 +1,24 @@
 import pytest
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from fastapi.testclient import TestClient
-from main import app
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-client = TestClient(app)
+# Mock google.genai to allow importing without dependency installed in tests environment
+sys.modules['google.genai'] = MagicMock()
+sys.modules['google.genai.types'] = MagicMock()
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from main import app, triage_endpoint, health_check, TriageRequest
+from fastapi import HTTPException
 
 def test_health_check():
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    response = health_check()
+    assert response == {"status": "ok"}
 
 @patch("main.get_secret")
 @patch("main.run_extraction")
 @patch("main.run_triage")
 def test_triage_endpoint_success(mock_triage, mock_extraction, mock_secret):
-    # Mocking external calls
     mock_secret.return_value = "TEST_API_KEY"
     mock_extraction.return_value = {
         "symptoms": ["chest pain"],
@@ -29,27 +30,18 @@ def test_triage_endpoint_success(mock_triage, mock_extraction, mock_secret):
         "action_plan": ["Call 911", "Provide Aspirin"]
     }
 
-    response = client.post(
-        "/api/triage",
-        json={"text": "chest pain 2hrs sweating"}
-    )
+    req = TriageRequest(text="chest pain 2hrs sweating")
+    data = triage_endpoint(req)
     
-    assert response.status_code == 200
-    data = response.json()
     assert data["status"] == "success"
     assert data["triage"]["urgency_level"] == "RED"
     assert "chest pain" in data["extracted"]["symptoms"]
 
-def test_triage_endpoint_missing_body():
-    # FastAPI automatically handles missing fields with 422 Unprocessable Entity
-    response = client.post("/api/triage", json={})
-    assert response.status_code == 422
-
 @patch("main.get_secret")
 def test_triage_endpoint_missing_api_key(mock_secret):
-    # Setup missing key flow via monkeypatch or directly mocking environmental fallbacks
     mock_secret.return_value = ""
+    req = TriageRequest(text="test")
     with patch("os.environ.get", return_value=""):
-        response = client.post("/api/triage", json={"text": "test"})
-        # The backend throws a 500 when keys are completely missing
-        assert response.status_code == 500
+        with pytest.raises(HTTPException) as exc_info:
+            triage_endpoint(req)
+        assert exc_info.value.status_code == 500

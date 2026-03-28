@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Secrets - NEVER commit these
+.env
+.env.*
+*.json
+!package.json
+
+# IDE
+.vscode/
+.idea/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+test_out.txt
+
+# Cloud
+.gcloudignore

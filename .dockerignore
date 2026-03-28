@@ -1,0 +1,11 @@
+# Exclude secrets from Docker image - CRITICAL
+.env
+*.json
+*.key
+.gitignore
+.git/
+__pycache__/
+*.pyc
+.pytest_cache/
+test_out.txt
+list_models.py
