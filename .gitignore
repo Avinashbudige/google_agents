@@ -10,8 +10,9 @@ env/
 # Secrets - NEVER commit these
 .env
 .env.*
-*.json
-!package.json
+*-c053d887095c.json
+*service-account*.json
+*-sa-key.json
 
 # IDE
 .vscode/

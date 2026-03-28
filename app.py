@@ -6,7 +6,7 @@ import os
 st.set_page_config(page_title="Medical Triage Bridge Agent", page_icon="🏥", layout="centered")
 
 st.title("🏥 Medical Triage Bridge Agent")
-st.markdown("Fast Hackathon MVP: **Triages chaotic statements via Gemini 1.5 Pro Agents into visual action plans.**")
+st.markdown("Fast Hackathon MVP: **Triages chaotic statements via 2 chained Gemini 2.5 Flash Agents.**")
 
 # A11y input section
 user_input = st.text_area(

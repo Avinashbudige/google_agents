@@ -1,23 +1,28 @@
 import os
 import re
 import json
+import google.auth
 from google import genai
 from google.genai import types
 from google.oauth2 import service_account
 
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "aiagents-491012")
 LOCATION   = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-SA_KEY_FILE = os.environ.get(
-    "GOOGLE_APPLICATION_CREDENTIALS",
-    r"D:\nishkama karma\nidhidyasana\reverse_engineering\google_agents\aiagents-491012-c053d887095c.json"
-)
+SA_KEY_FILE = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
 
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
 def _get_credentials():
-    return service_account.Credentials.from_service_account_file(
-        SA_KEY_FILE, scopes=SCOPES
-    )
+    """Use SA JSON locally, Workload Identity automatically in Cloud Run."""
+    if SA_KEY_FILE and os.path.exists(SA_KEY_FILE):
+        return service_account.Credentials.from_service_account_file(
+            SA_KEY_FILE, scopes=SCOPES
+        )
+    creds, _ = google.auth.default(scopes=SCOPES)
+    return creds
+
+# Singleton client — created once at startup, reused on every request
+_CLIENT = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION, credentials=_get_credentials())
 
 def _parse_json(raw: str) -> dict:
     """Strip markdown fences and parse JSON cleanly."""
@@ -29,13 +34,6 @@ def _parse_json(raw: str) -> dict:
 
 def run_triage(extracted_data: dict, api_key: str = "") -> dict:
     """Agent 2: Triages patient data into actionable urgency levels via Vertex AI ADC."""
-    client = genai.Client(
-        vertexai=True,
-        project=PROJECT_ID,
-        location=LOCATION,
-        credentials=_get_credentials(),
-    )
-
     config = types.GenerateContentConfig(
         system_instruction=(
             "You are an expert clinical triage agent. "
@@ -51,7 +49,7 @@ def run_triage(extracted_data: dict, api_key: str = "") -> dict:
 
     prompt = f"Triage the following patient details:\n{json.dumps(extracted_data)}"
 
-    response = client.models.generate_content(
+    response = _CLIENT.models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt,
         config=config
