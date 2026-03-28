@@ -1,0 +1,21 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-7.4.4, pluggy-1.6.0
+rootdir: D:\nishkama karma\nidhidyasana\reverse_engineering\google_agents
+plugins: anyio-4.12.1, hypothesis-6.98.0, asyncio-0.23.3, cov-7.0.0
+asyncio: mode=Mode.STRICT
+collected 0 items / 1 error
+
+=================================== ERRORS ====================================
+_____________________ ERROR collecting tests/test_api.py ______________________
+ImportError while importing test module 'D:\nishkama karma\nidhidyasana\reverse_engineering\google_agents\tests\test_api.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\Avinash\AppData\Local\Programs\Python\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_api.py:3: in <module>
+    from main import app
+E   ModuleNotFoundError: No module named 'main'
+=========================== short test summary info ===========================
+ERROR tests/test_api.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+============================== 1 error in 1.90s ===============================

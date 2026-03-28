@@ -1,0 +1,27 @@
+# deployment.yaml
+# Cloud Run configuration for deploying both the backend and frontend
+# For a simpler MVP deployment, we can deploy the FastAPI and Streamlit apps in the same container using a run script.
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: triage-bridge-agent
+  labels:
+    cloud.googleapis.com/location: us-central1
+spec:
+  template:
+    spec:
+      containers:
+      - image: gcr.io/PROJECT_ID/triage-bridge-agent:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+        - name: GOOGLE_CLOUD_PROJECT
+          value: "PROJECT_ID"
+        resources:
+          limits:
+            cpu: "2"
+            memory: "2Gi"
+        # Secret Manager integration (optional via env var, but here handled in code)
